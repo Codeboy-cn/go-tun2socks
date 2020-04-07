@@ -1,4 +1,4 @@
-module github.com/eycorsican/go-tun2socks
+module github.com/tun2socks/go-tun2socks
 
 go 1.13
 
