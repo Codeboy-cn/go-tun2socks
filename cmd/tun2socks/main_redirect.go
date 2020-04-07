@@ -3,8 +3,8 @@
 package main
 
 import (
-	"github.com/eycorsican/go-tun2socks/core"
-	"github.com/eycorsican/go-tun2socks/proxy/redirect"
+	"github.com/tun2socks/go-tun2socks/core"
+	"github.com/tun2socks/go-tun2socks/proxy/redirect"
 )
 
 func init() {
