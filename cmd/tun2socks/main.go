@@ -45,6 +45,8 @@ type CmdArgs struct {
 	ProxyServer     *string
 	ProxyHost       *string
 	ProxyPort       *uint16
+	ProxyAccount    *string
+	ProxyPassword   *string
 	UdpTimeout      *time.Duration
 	LogLevel        *string
 	DnsFallback     *bool
@@ -55,6 +57,8 @@ type cmdFlag uint
 const (
 	fProxyServer cmdFlag = iota
 	fUdpTimeout
+	fProxyAccount
+	fProxyPassword
 )
 
 var flagCreaters = map[cmdFlag]func(){
@@ -66,6 +70,16 @@ var flagCreaters = map[cmdFlag]func(){
 	fUdpTimeout: func() {
 		if args.UdpTimeout == nil {
 			args.UdpTimeout = flag.Duration("udpTimeout", 1*time.Minute, "UDP session timeout")
+		}
+	},
+	fProxyAccount: func() {
+		if args.ProxyAccount == nil {
+			args.ProxyAccount = flag.String("proxyAccount", "", "Proxy server account")
+		}
+	},
+	fProxyPassword: func() {
+		if args.ProxyPassword == nil {
+			args.ProxyPassword = flag.String("proxyPassword", "", "Proxy server password")
 		}
 	},
 }

@@ -35,6 +35,7 @@ var socks5Errors = []error{
 	errors.New("command not supported"),
 	errors.New("address type not supported"),
 	errors.New("socks5UDPAssociate"),
+	errors.New("account or password error"),
 }
 
 // MaxAddrLen is the maximum size of SOCKS address in bytes.

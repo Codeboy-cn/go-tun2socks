@@ -1,6 +1,7 @@
 package socks
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -18,22 +19,26 @@ const maxUdpPayloadSize = 65535 - 20 - 8 - 7
 type udpHandler struct {
 	sync.Mutex
 
-	proxyHost   string
-	proxyPort   uint16
-	udpConns    map[core.UDPConn]net.PacketConn
-	tcpConns    map[core.UDPConn]net.Conn
-	remoteAddrs map[core.UDPConn]*net.UDPAddr // UDP relay server addresses
-	timeout     time.Duration
+	proxyHost     string
+	proxyPort     uint16
+	proxyAccount  string
+	proxyPassword string
+	udpConns      map[core.UDPConn]net.PacketConn
+	tcpConns      map[core.UDPConn]net.Conn
+	remoteAddrs   map[core.UDPConn]*net.UDPAddr // UDP relay server addresses
+	timeout       time.Duration
 }
 
-func NewUDPHandler(proxyHost string, proxyPort uint16, timeout time.Duration) core.UDPConnHandler {
+func NewUDPHandler(proxyHost string, proxyPort uint16, timeout time.Duration, proxyAccount string, proxyPassword string) core.UDPConnHandler {
 	return &udpHandler{
-		proxyHost:   proxyHost,
-		proxyPort:   proxyPort,
-		udpConns:    make(map[core.UDPConn]net.PacketConn, 8),
-		tcpConns:    make(map[core.UDPConn]net.Conn, 8),
-		remoteAddrs: make(map[core.UDPConn]*net.UDPAddr, 8),
-		timeout:     timeout,
+		proxyHost:     proxyHost,
+		proxyPort:     proxyPort,
+		proxyAccount:  proxyAccount,
+		proxyPassword: proxyPassword,
+		udpConns:      make(map[core.UDPConn]net.PacketConn, 8),
+		tcpConns:      make(map[core.UDPConn]net.Conn, 8),
+		remoteAddrs:   make(map[core.UDPConn]*net.UDPAddr, 8),
+		timeout:       timeout,
 	}
 }
 
@@ -100,12 +105,34 @@ func (h *udpHandler) connectInternal(conn core.UDPConn, dest string) error {
 	}
 
 	// send VER, NMETHODS, METHODS
-	c.Write([]byte{5, 1, 0})
+	c.Write([]byte{5, 2, 0, 2})
 
 	buf := make([]byte, MaxAddrLen)
 	// read VER METHOD
 	if _, err := io.ReadFull(c, buf[:2]); err != nil {
 		return err
+	}
+
+	// requires account password authentication
+	if buf[1] == 2 {
+		data := bytes.NewBuffer(make([]byte, 0, 3+len(h.proxyAccount)+len(h.proxyPassword)))
+		data.WriteByte(0x01)
+		data.WriteByte(byte(len(h.proxyAccount)))
+		data.WriteString(h.proxyAccount)
+		data.WriteByte(byte(len(h.proxyPassword)))
+		data.WriteString(h.proxyPassword)
+
+		// send VER, USER_LENGTH, USER, PASS_LENGTH, PASS
+		c.Write(data.Bytes())
+
+		// read METHOD STATUS
+		if _, err := io.ReadFull(c, buf[:2]); err != nil {
+			return err
+		}
+
+		if buf[1] != 0x00 {
+			return socks5Errors[10]
+		}
 	}
 
 	if len(dest) != 0 {

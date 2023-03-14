@@ -14,14 +14,18 @@ import (
 type tcpHandler struct {
 	sync.Mutex
 
-	proxyHost string
-	proxyPort uint16
+	proxyHost     string
+	proxyPort     uint16
+	proxyAccount  string
+	proxyPassword string
 }
 
-func NewTCPHandler(proxyHost string, proxyPort uint16) core.TCPConnHandler {
+func NewTCPHandler(proxyHost string, proxyPort uint16, proxyAccount string, proxyPassword string) core.TCPConnHandler {
 	return &tcpHandler{
-		proxyHost: proxyHost,
-		proxyPort: proxyPort,
+		proxyHost:     proxyHost,
+		proxyPort:     proxyPort,
+		proxyAccount:  proxyAccount,
+		proxyPassword: proxyPassword,
 	}
 }
 
@@ -86,7 +90,16 @@ func (h *tcpHandler) relay(lhs, rhs net.Conn) {
 }
 
 func (h *tcpHandler) Handle(conn net.Conn, target *net.TCPAddr) error {
-	dialer, err := proxy.SOCKS5("tcp", core.ParseTCPAddr(h.proxyHost, h.proxyPort).String(), nil, nil)
+
+	var auth *proxy.Auth
+	if len(h.proxyAccount) > 0 {
+		auth = &proxy.Auth{
+			User:     h.proxyAccount,
+			Password: h.proxyPassword,
+		}
+	}
+
+	dialer, err := proxy.SOCKS5("tcp", core.ParseTCPAddr(h.proxyHost, h.proxyPort).String(), auth, nil)
 	if err != nil {
 		return err
 	}
